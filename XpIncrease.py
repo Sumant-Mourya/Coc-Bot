@@ -36,7 +36,8 @@ def extract_data(x, y, width, height):
     
     # Take screenshot
     screenshot = ImageGrab.grab(bbox=(left, top, right, bottom))
-    
+    # screenshot.save('data.png')
+
     # Convert to NumPy array for PaddleOCR
     img = np.array(screenshot)
     
@@ -110,6 +111,7 @@ def find_next():
             pass
 
 def find_returnHome():
+    print("Returning Home...")
     image_path = "returnHome.png"  # Replace with your file name
 
     while True:
@@ -244,6 +246,8 @@ def Looting():
         if exlier_enemy>=loot_elixer_threshold:
             print(f"Loot {exlier_enemy} Found Attacking...")
             zoom_out()
+            zoom_out()
+            swipe_up()
             swipe_up()
             deployTroop()
             find_returnHome()
@@ -396,6 +400,7 @@ def find_settingforDonation():
             if location:
                 center = pyautogui.center(location)
                 pyautogui.moveTo(center)
+                find_claim()
                 break
             else:
                 defenceRun()
@@ -415,6 +420,22 @@ def find_setting():
                 pass
         except Exception as e:
             pass
+
+def find_claim():
+    image_path = "claim.png"  # Replace with your file name
+
+    while True:
+        try:
+            location = pyautogui.locateOnScreen(image_path, confidence=0.8)
+
+            if location:
+                center = pyautogui.center(location)
+                pyautogui.click(center)
+                break
+            else:
+                break
+        except Exception as e:
+            break
 
 def find_supercellfordonation():
     image_path = "supercell.png"  # Replace with your file name
@@ -483,6 +504,103 @@ def request_troop():
 
 def mainReqRun():
     print("Troop Request Started")
+
+    find_settingforDonation()
+    pyautogui.click()
+    time.sleep(.5)
+    pyautogui.click(1236,225)
+    time.sleep(1)
+    for _ in range(9): # Buggu+30
+        scroll_up()
+    pyautogui.click(1653,761)
+    find_supercellfordonation()
+    find_settingforDonation()
+    request_troop()
+
+    find_settingforDonation()
+    pyautogui.click()
+    time.sleep(.5)
+    pyautogui.click(1236,225)
+    time.sleep(1)
+    for _ in range(8): # Buggu+29
+        scroll_up()
+    pyautogui.click(1653,1042)
+    find_supercellfordonation()
+    find_settingforDonation()
+    request_troop()
+
+    find_settingforDonation()
+    pyautogui.click()
+    time.sleep(.5)
+    pyautogui.click(1236,225)
+    time.sleep(1)
+    for _ in range(8): # Buggu+28
+        scroll_up()
+    pyautogui.click(1653,891)
+    find_supercellfordonation()
+    find_settingforDonation()
+    request_troop()
+
+    find_settingforDonation()
+    pyautogui.click()
+    time.sleep(.5)
+    pyautogui.click(1236,225)
+    time.sleep(1)
+    for _ in range(8): # Buggu+27
+        scroll_up()
+    pyautogui.click(1653,755)
+    find_supercellfordonation()
+    find_settingforDonation()
+    request_troop()
+
+    find_settingforDonation()
+    pyautogui.click()
+    time.sleep(.5)
+    pyautogui.click(1236,225)
+    time.sleep(1)
+    for _ in range(8): # Buggu+26
+        scroll_up()
+    pyautogui.click(1653,609)
+    find_supercellfordonation()
+    find_settingforDonation()
+    request_troop()
+
+    find_settingforDonation()
+    pyautogui.click()
+    time.sleep(.5)
+    pyautogui.click(1236,225)
+    time.sleep(1)
+    for _ in range(7): # Buggu+25
+        scroll_up()
+    pyautogui.click(1653,1042)
+    find_supercellfordonation()
+    find_settingforDonation()
+    request_troop()
+
+    find_settingforDonation()
+    pyautogui.click()
+    time.sleep(.5)
+    pyautogui.click(1236,225)
+    time.sleep(1)
+    for _ in range(7): # Buggu+24
+        scroll_up()
+    pyautogui.click(1653,891)
+    find_supercellfordonation()
+    find_settingforDonation()
+    request_troop()
+
+    find_settingforDonation()
+    pyautogui.click()
+    time.sleep(.5)
+    pyautogui.click(1236,225)
+    time.sleep(1)
+    for _ in range(7): # Buggu+23
+        scroll_up()
+    pyautogui.click(1653,755)
+    find_supercellfordonation()
+    find_settingforDonation()
+    request_troop()
+
     find_settingforDonation()
     pyautogui.click()
     time.sleep(.5)
@@ -490,7 +608,7 @@ def mainReqRun():
     time.sleep(1)
     for _ in range(7): # Buggu+22
         scroll_up()
-    pyautogui.click(1653,761)
+    pyautogui.click(1653,609)
     find_supercellfordonation()
     find_settingforDonation()
     request_troop()
@@ -834,7 +952,6 @@ def ReqAndDonate():
     mainReqRun()
     clearNotice()
     donateTroop()
-    trophyDecreasefordonate()
 
 #Request Troop Code End
 
@@ -845,7 +962,7 @@ def trophyDecrease():
         trophy = extract_data(110, 137, 110, 32)
 
         if trophy > min_trophy:
-            print(f"Trophy is more than {min_trophy}, start decreasing trophies")
+            print(f"{trophy} > {min_trophy}, start decreasing trophies")
             for _ in range(10):  # ✅ correct loop
                 attack_Button()
                 find_next()
@@ -856,8 +973,9 @@ def trophyDecrease():
                 pyautogui.click(117, 851)
                 pyautogui.click(1106, 666)
                 find_returnHome()
+                time.sleep(.5)
         else:
-            print(f"Trophy is less than {min_trophy}, no need to decrease trophies")
+            print(f"{trophy} < {min_trophy}, no need to decrease trophies")
             break
 
 def trophyDecreasefordonate():
@@ -909,32 +1027,33 @@ def donate_omi():
 
 
 home_elixer_threshold=28000000
-donate_threshold=3000000
-loot_elixer_threshold=1200000
+donate_threshold=25000000
+loot_elixer_threshold=200000
 min_trophy=400
 
 
 while True:
+    donateTroop()
     try:
         clearNotice()
         home_elixer = extract_data(1594, 117, 250, 35)
 
         if home_elixer >= donate_threshold:
             print(f"[DONATE] {home_elixer} ≥ {donate_threshold} → Donating...")
-            donateTroop()
             ReqAndDonate()
 
         else:
-            trophyDecrease()
+            # trophyDecrease()
 
             while True:
-                print(f"[LOOTING] {home_elixer} < {donate_threshold} → Start Looting...")
-                home_elixer = extract_data(1594, 117, 250, 35)
+                time.sleep(1)
+                home_elixer1 = extract_data(1594, 117, 250, 35)
+                print(f"[LOOTING] {home_elixer1} < {donate_threshold} → Start Looting...")
 
-                if home_elixer <= home_elixer_threshold:
+                if home_elixer1 <= home_elixer_threshold:
                     Looting()
                 else:
-                    print(f"[STOP LOOTING] {home_elixer} ≥ {home_elixer_threshold} → Back to donation check")
+                    print(f"[STOP LOOTING] {home_elixer1} ≥ {home_elixer_threshold} → Back to donation check")
                     break
 
     except Exception as e:
