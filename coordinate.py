@@ -1,11 +1,12 @@
 import pyautogui
 import time
 
-print("Press Ctrl+C to stop...\n")
+# print("Press Ctrl+C to stop...\n")
 try:
     while True:
         x, y = pyautogui.position()  # Get current mouse coordinates
         print(f"Mouse Position: X={x}, Y={y}")
-        time.sleep(1)  # Delay of 1 second
+        time.sleep(2)  # Delay of 1 second
 except KeyboardInterrupt:
-    print("\nProgram stopped by user.")
+    pass
+    # print("\nProgram stopped by user.")
