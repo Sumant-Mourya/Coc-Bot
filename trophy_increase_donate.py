@@ -1125,28 +1125,6 @@ def find_setting_for_trophy_decrease():
         except pyautogui.ImageNotFoundException:
             break
 
-def trophyDecrease():
-    zoom_out_for_trophy_decrease()
-    while True:
-        trophy = get_trophy_for_trophy_decrease(110, 137, 110, 32)
-
-        if trophy > min_trophy:
-            print(f"{trophy} > {min_trophy}, start decreasing trophies")
-            for _ in range(10):
-                attack_Button_for_trophy_decrease()
-                find_next_for_trophy_decrease()
-                pyautogui.click(332,994)
-                pyautogui.click(1754+15, 530)
-                pyautogui.click(1754, 530)
-                pyautogui.click(1754-15, 530)
-                pyautogui.click(117, 851)
-                pyautogui.click(1106, 666)
-                find_returnHome_for_trophy_decrease()
-                time.sleep(.5)
-        else:
-            print(f"{trophy} < {min_trophy}, no need to decrease trophies")
-            break
-
 def change_account_after_error():
     image_path1 = "setting.png"
     image_path2 = "changeaccount.png"
@@ -1182,21 +1160,23 @@ def change_account_after_error():
         except Exception as e:
             pass
 
-home_elixer_threshold=28000000
-donate_threshold=1000000
-loot_elixer_threshold=1200000
-min_trophy=400
+home_elixer_threshold=29000000
+donate_threshold=40000000
+loot_elixer_threshold=600000
 
 def main_loop():
-    donateTroop()
+    clearNotice()
     while True:
         status = home_elixerd_data_for_donate(1594, 117, 250, 35)
+        print(f"Home Exlier is {status}")
         if status > donate_threshold:
             print("Elixer fullfill Requirement, Donation Started")
-            ReqAndDonate()
+            donateTroop()
+            status1 = home_elixerd_data_for_donate(1594, 117, 250, 35)
+            if status1>donate_threshold:
+                ReqAndDonate()
         else:
             print("Elixer Not fullfill Requirement, Loot Started")
-            trophyDecrease()
             loot_loop()
 
 while True:
@@ -1208,7 +1188,6 @@ while True:
         # Restart the script itself
         os.execv(sys.executable, ['python'] + sys.argv)
         change_account_after_error()
-
 
 
 
