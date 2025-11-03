@@ -27,6 +27,7 @@ ocr = PaddleOCR(use_angle_cls=True, lang='en')
 
 
 def find_donateButton():
+    tries=1
     image_path = "donateButton.png"  # Replace with your file name
 
     while True:
@@ -39,6 +40,10 @@ def find_donateButton():
                 time.sleep(0.5)  # small delay before searching again
                 find_supWizard()
                 time.sleep(0.5)  # small delay before searching again
+                if tries>=60:
+                    break
+                else:
+                    tries+=1
             else:
                 break   # stop when not found even once
         except Exception as e:
@@ -219,6 +224,7 @@ def find_settingforverification():
             if location:
                 clearNotice()
                 find_claim()
+                # find_confirm()
                 break
             else:
                 defenceRun()
@@ -226,6 +232,22 @@ def find_settingforverification():
         except pyautogui.ImageNotFoundException:
             defenceRun()
             pass
+
+def find_confirm():
+    image_path = "confirm.png"  # Replace with your file name
+
+    while True:
+        try:
+            location = pyautogui.locateOnScreen(image_path, confidence=0.8)
+
+            if location:
+                center = pyautogui.center(location)
+                pyautogui.click(center)
+                break
+            else:
+                break
+        except Exception as e:
+            break
 
 def find_claim():
     image_path = "claim.png"  # Replace with your file name
@@ -662,7 +684,7 @@ def ReqAndDonate():
     mainReqRun()
     donateTroop()
 
-def home_elixerd_data_for_donate(x, y, width, height):
+def home_resource_for_donate(x, y, width, height):
     # Define bounding box
     left = x
     top = y
@@ -698,13 +720,12 @@ def home_elixerd_data_for_donate(x, y, width, height):
     
     return result_int
 
-    
 # Donation Code End
 
 
 # Loot Code Started
 
-def enemy_elixer_for_loot(x, y, width, height):
+def enemy_resource_for_loot(x, y, width, height):
     # Define bounding box
     left = x
     top = y
@@ -975,22 +996,22 @@ def find_setting_for_loot():
         except pyautogui.ImageNotFoundException:
             break
 
-def loot_loop():
+def loot_loop(coords,coordsforLoot):
     while True:
-        home_exlier=home_elixerd_data_for_loot(1594, 117, 250, 35)
-        if home_exlier>=home_elixer_threshold:
-            print(f"Storage Full No Looting {home_exlier} > {home_elixer_threshold}")
+        home_exlier=home_elixerd_data_for_loot(*coords)
+        if home_exlier>=home_resource_threshold:
+            print(f"Storage Full No Looting {home_exlier} > {home_resource_threshold}")
             break
         else:
-            print(f"Storage Empty Need Loot {home_exlier} < {home_elixer_threshold}")
+            print(f"Storage Empty Need Loot {home_exlier} < {home_resource_threshold}")
             zoom_out_for_loot()
             zoom_out_for_loot()
             attack_Button_for_looting()
             while True:
                 find_next_for_loot()
                 time.sleep(1)
-                enemy_elixer=enemy_elixer_for_loot(76,167,200,35)
-                if enemy_elixer>=loot_elixer_threshold:
+                enemy_elixer=enemy_resource_for_loot(*coordsforLoot)
+                if enemy_elixer>=loot_resource_threshold:
                     print(f"Loot {enemy_elixer} Found Attacking...")
                     deployTroop()
                     find_returnHome_for_loot()
@@ -1003,158 +1024,14 @@ def loot_loop():
                     pass
 
 
-
-def get_trophy_for_trophy_decrease(x, y, width, height):
-    # Define bounding box
-    left = x
-    top = y
-    right = x + width
-    bottom = y + height
-    
-    # Take screenshot
-    screenshot = ImageGrab.grab(bbox=(left, top, right, bottom))
-
-    # Convert to NumPy array for PaddleOCR
-    img = np.array(screenshot)
-    
-    # Run OCR
-    results = ocr.ocr(img, cls=True)
-    
-    # Extract text
-    text = ''
-    if results and results[0]:
-        for line in results[0]:
-            text += line[1][0]
-    
-    # Keep only numbers
-    numbers = re.findall(r'\d+', text)
-    result = ''.join(numbers)
-    
-    # Convert to integer (default 0 if empty)
-    result_int = int(result) if result.isdigit() else 0
-    
-    # Clean up memory
-    del results, screenshot
-    gc.collect()
-    
-    return result_int
-
-def zoom_out_for_trophy_decrease():
-    for _ in range(10):
-        pyautogui.moveTo(1920/2,1080/2)
-        pyautogui.scroll(-500)
-
-def attack_Button_for_trophy_decrease():
-    attack1_img = "attack1.png"
-    attack2_img = "attack2.png"
-
-    while True:
-        try:
-            # --- Search Attack1 ---
-            location1 = pyautogui.locateOnScreen(attack1_img, confidence=0.8)
-            if not location1:
-                break
-
-            # Click Attack1
-            center1 = pyautogui.center(location1)
-            pyautogui.click(center1)
-            time.sleep(0.5)
-
-            # --- Search Attack2 ---
-            location2 = pyautogui.locateOnScreen(attack2_img, confidence=0.8)
-            if location2:
-                center2 = pyautogui.center(location2)
-                pyautogui.click(center2)
-                time.sleep(0.5)
-
-            # Loop continues, goes back to search for Attack1 again
-
-        except Exception as e:
-            break
-
-def find_next_for_trophy_decrease():
-    image_path = "next.png"  # Replace with your file name
-
-    while True:
-        try:
-            location = pyautogui.locateOnScreen(image_path, confidence=0.8)
-            if location:
-                center = pyautogui.center(location)
-                pyautogui.moveTo(center)
-                break
-            else:
-                pass
-        except Exception as e:
-            pass
-
-def find_returnHome_for_trophy_decrease():
-    image_path = "returnHome.png"  # Replace with your file name
-
-    while True:
-        try:
-            location = pyautogui.locateOnScreen(image_path, confidence=0.8)
-            if location:
-                center = pyautogui.center(location)
-                pyautogui.click(center)
-                pyautogui.click()
-                pyautogui.click()
-                result=find_setting_for_trophy_decrease()
-                if result:
-                    break
-                else:
-                    pass
-            else:
-                result=find_setting_for_trophy_decrease()
-                if result:
-                    break
-        except Exception as e:
-                result=find_setting_for_trophy_decrease()
-                if result:
-                    break
-
-def find_setting_for_trophy_decrease():
-    image_path = "setting.png"  # Replace with your file name
-    while True:
-        try:
-            location = pyautogui.locateOnScreen(image_path, confidence=0.8)
-
-            if location:
-                return True
-            else:
-                break
-        except pyautogui.ImageNotFoundException:
-            break
-
-def trophyDecrease():
-    zoom_out_for_trophy_decrease()
-    while True:
-        trophy = get_trophy_for_trophy_decrease(110, 137, 110, 32)
-
-        if trophy > min_trophy:
-            print(f"{trophy} > {min_trophy}, start decreasing trophies")
-            for _ in range(10):
-                attack_Button_for_trophy_decrease()
-                find_next_for_trophy_decrease()
-                pyautogui.click(332,994)
-                pyautogui.click(1754+15, 530)
-                pyautogui.click(1754, 530)
-                pyautogui.click(1754-15, 530)
-                pyautogui.click(117, 851)
-                pyautogui.click(1106, 666)
-                find_returnHome_for_trophy_decrease()
-                time.sleep(.5)
-        else:
-            print(f"{trophy} < {min_trophy}, no need to decrease trophies")
-            break
-
 def change_account_after_error():
     image_path1 = "setting.png"
     image_path2 = "changeaccount.png"
 
-    pyautogui.click("space")
-    pyautogui.click("space")
-    pyautogui.click("space")
-    pyautogui.click("space")
+    pyautogui.hotkey("space")
+    pyautogui.hotkey("space")
+    pyautogui.hotkey("space")
+    pyautogui.hotkey("space")
 
     while True:
         try:
@@ -1182,26 +1059,57 @@ def change_account_after_error():
         except Exception as e:
             pass
 
-home_elixer_threshold=28000000
-donate_threshold=1000000
-loot_elixer_threshold=1200000
-min_trophy=400
+# Coordinates
+own_gold = (1594, 34, 250, 35)
+own_elixer = (1594, 117, 250, 35)
+own_dark_elixer = (1594, 203, 250, 35)
 
-def main_loop():
-    donateTroop()
+gold_for_loot = (76,119,200,35)
+elixer_for_loot = (76,167,200,35)
+dark_elixer_for_loot = (76,215,200,35)
+
+home_resource_threshold=28000000
+loot_resource_threshold=1200000
+
+def main_loop(resource_type,donateOrNot):
+    if resource_type==1:
+        coords=own_gold
+    elif resource_type==2:
+        coords=own_elixer
+    elif resource_type==3:
+        coords=own_dark_elixer
+
+    if donateOrNot==0:
+        donate_threshold=50000000
+    elif donateOrNot==1:
+        donate_threshold=4000000
+
+    if resource_type==1:
+        coordsforLoot=gold_for_loot
+    elif resource_type==2:
+        coordsforLoot=elixer_for_loot
+    elif resource_type==3:
+        coordsforLoot=dark_elixer_for_loot
+
     while True:
-        status = home_elixerd_data_for_donate(1594, 117, 250, 35)
+        change_account_after_error()
+        status = home_resource_for_donate(*coords)
         if status > donate_threshold:
+            donateTroop()
             print("Elixer fullfill Requirement, Donation Started")
             ReqAndDonate()
         else:
             print("Elixer Not fullfill Requirement, Loot Started")
-            trophyDecrease()
-            loot_loop()
+            loot_loop(coords,coordsforLoot)
+
+# Resource Type (1=Gold, 2=Elixir, 3=Dark Elixir)
+# Donate (1=Yes, 0=No)
+resource_type = 2
+donateOrNot=1
 
 while True:
     try:
-        main_loop()
+        main_loop(resource_type,donateOrNot)
     except Exception as e:
         print(f"[ERROR] → Restarting app...")
         time.sleep(2)

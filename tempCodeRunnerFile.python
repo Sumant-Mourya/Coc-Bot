@@ -1,0 +1,81 @@
+import time
+import numpy as np
+import pyautogui
+import sys
+import os
+import gc
+import logging
+import re
+from PIL import ImageGrab
+from paddleocr import PaddleOCR
+
+# 🔇 1. Silence Paddle’s internal C++ logs
+os.environ["FLAGS_logging_level"] = "3"   # 0=ALL, 1=WARN, 2=ERROR, 3=FATAL
+os.environ["GLOG_minloglevel"] = "3"      # Hide INFO/DEBUG/WARN from GLOG
+
+# 🔇 2. Silence Python ppocr logger
+logging.getLogger("ppocr").setLevel(logging.ERROR)
+
+# 🔇 3. Redirect stderr (Paddle prints logs there)
+sys.stderr = open(os.devnull, "w")
+
+# Initialize PaddleOCR once (better than reloading each call)
+ocr = PaddleOCR(use_angle_cls=True, lang='en')
+
+
+def enemy_resource_for_loot(x, y, width, height):
+    # Define bounding box
+    left = x
+    top = y
+    right = x + width
+    bottom = y + height
+    
+    # Take screenshot
+    screenshot = ImageGrab.grab(bbox=(left, top, right, bottom))
+    # screenshot.save('data.png')
+
+    # Convert to NumPy array for PaddleOCR
+    img = np.array(screenshot)
+    
+    # Run OCR
+    results = ocr.ocr(img, cls=True)
+    
+    # Extract text
+    text = ''
+    if results and results[0]:
+        for line in results[0]:
+            text += line[1][0]
+    
+    # Keep only numbers
+    numbers = re.findall(r'\d+', text)
+    result = ''.join(numbers)
+    
+    # Convert to integer (default 0 if empty)
+    result_int = int(result) if result.isdigit() else 0
+    
+    # Clean up memory
+    del results, screenshot
+    gc.collect()
+    
+    return result_int
+
+
+gold = (76,119,200,35)
+elixer = (76,167,200,35)
+dark_elixer = (76,215,200,35)
+
+resource_type=3
+
+if resource_type==1:
+    coords=gold
+elif resource_type==2:
+    coords=elixer
+elif resource_type==3:
+    coords=dark_elixer
+
+
+a=enemy_resource_for_loot(*coords)
+print(a)
+pyautogui.screenshot("1111.png",region=coords)
+
+
