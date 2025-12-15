@@ -8,7 +8,9 @@ import logging
 import re
 from PIL import ImageGrab
 from paddleocr import PaddleOCR
-
+from check_to_reload_game import isGameRunning
+from check_to_reload_game import find_reload_game
+from pynput.keyboard import Controller
 
 # 🔇 1. Silence Paddle’s internal C++ logs
 os.environ["FLAGS_logging_level"] = "3"   # 0=ALL, 1=WARN, 2=ERROR, 3=FATAL
@@ -24,13 +26,12 @@ sys.stderr = open(os.devnull, "w")
 ocr = PaddleOCR(use_angle_cls=True, lang='en')
 
 
-
-
 def find_donateButton():
     tries=1
     image_path = "donateButton.png"  # Replace with your file name
 
     while True:
+        isGameRunning()
         try:
             location = pyautogui.locateOnScreen(image_path, confidence=0.8)
 
@@ -194,6 +195,7 @@ def change_account():
 
     while True:
         try:
+            isGameRunning()
             location = pyautogui.locateOnScreen(image_path1, confidence=0.8)
 
             if location:
@@ -224,6 +226,7 @@ def find_settingforverification():
             if location:
                 clearNotice()
                 find_claim()
+                isGameRunning()
                 # find_confirm()
                 break
             else:
@@ -265,14 +268,14 @@ def find_claim():
         except Exception as e:
             break
 
-def find_black():
-    image_path = "blackscreen.png"
+def find_loading():
+    image_path = "loading.png"
 
     while True:
         try:
             location = pyautogui.locateOnScreen(image_path, confidence=0.8)
-
             if location:
+                pyautogui.moveTo()
                 pass
             else:
                 find_settingforverification()
@@ -354,7 +357,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,761)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -363,7 +366,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,1042)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -372,7 +375,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,891)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -381,7 +384,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,755)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -390,7 +393,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,609)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -399,7 +402,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,1042)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -408,7 +411,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,891)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -417,7 +420,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,755)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -426,7 +429,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,609)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -435,7 +438,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,1042)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -444,7 +447,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,891)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -453,7 +456,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,755)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -462,7 +465,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,609)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -471,7 +474,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,1042)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -480,7 +483,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,891)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -489,7 +492,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,755)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -498,7 +501,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,609)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -507,7 +510,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,1042)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -516,7 +519,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,891)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -525,7 +528,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,755)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -534,7 +537,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,609)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -543,7 +546,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,1042)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -552,7 +555,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,891)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -561,7 +564,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,755)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -570,7 +573,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,609)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -579,7 +582,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,1042)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -588,7 +591,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,891)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -597,7 +600,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,755)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -606,7 +609,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,609)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -615,7 +618,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,1042)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -624,7 +627,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,891)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -633,7 +636,7 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,755)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
@@ -642,35 +645,35 @@ def mainReqRun():
         scroll_up()
     pyautogui.click(1653,609)
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
     time.sleep(1)
     pyautogui.click(1653,1042) # Buggu04
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
     time.sleep(1)
     pyautogui.click(1653,891) # Buggu03
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
 
     change_account()
     time.sleep(1)
     pyautogui.click(1653,755) # Buggu02
     find_supercellfordonation()
-    find_black()
+    find_loading()
     request_troop()
     
     change_account()
     time.sleep(1)
     pyautogui.click(1653,609) # Buggu01
     find_supercellfordonation()
-    find_black()
+    find_loading()
     print("Troop Request Ended")
 
 def defenceRun():
@@ -681,7 +684,9 @@ def defenceRun():
     pyautogui.mouseUp()
 
 def ReqAndDonate():
+    isGameRunning()
     mainReqRun()
+    isGameRunning()
     donateTroop()
 
 def home_resource_for_donate(x, y, width, height):
@@ -801,6 +806,7 @@ def attack_Button_for_looting():
     image_path = "attack1.png"  # Replace with your file name
 
     while True:
+        isGameRunning()
         try:
             location = pyautogui.locateOnScreen(image_path, confidence=0.8)
 
@@ -825,12 +831,15 @@ def find_attack2():
     image_path = "attack2.png"  # Replace with your file name
 
     while True:
+        isGameRunning()
         try:
             location = pyautogui.locateOnScreen(image_path, confidence=0.8)
 
             if location:
                 center = pyautogui.center(location)
                 pyautogui.click(center)
+                time.sleep(.5)
+                pyautogui.click(1630,920)
                 time.sleep(.5)
             else:
                 break
@@ -841,6 +850,7 @@ def find_next_for_loot():
     image_path = "next.png"  # Replace with your file name
 
     while True:
+        isGameRunning()
         try:
             location = pyautogui.locateOnScreen(image_path, confidence=0.8)
             if location:
@@ -863,8 +873,10 @@ def swipe_up():
     pyautogui.moveTo(100,50)
     pyautogui.mouseUp()
 
+keyboard = Controller()
+
 def deploy_spell(x=15,y=15):
-    pyautogui.click(1101,994) #Select Clone
+    # pyautogui.click(1101,994) #Select Clone
 
     pyautogui.click(240-x,525-y)
     pyautogui.click(913-x,10-y)
@@ -879,7 +891,7 @@ def deploy_spell(x=15,y=15):
     pyautogui.click(1708+x,520+y)
 
 def deploy_ed(x=15,y=15):
-    pyautogui.click(332,994) #Select Ed
+    # pyautogui.click(332,994) #Select Ed
 
     pyautogui.click(683-x,876-y)
     pyautogui.click(491-x,714-y)
@@ -918,37 +930,73 @@ def deploy_ed(x=15,y=15):
     pyautogui.click(1298+x,8486+y)
 
 def deploy_hero(x=15,y=15):
-    pyautogui.click(594,994) #King
+    # pyautogui.click(594,994) #King
+    keyboard.press('q')
+    keyboard.release('q')
     pyautogui.click(491+x,714-y)
     pyautogui.click(491,714)
     pyautogui.click(491-x,714+y)
 
-    pyautogui.click(714,987) #Queen
+    # pyautogui.click(714,987) #Queen
+    keyboard.press('w')
+    keyboard.release('w')
     pyautogui.click(751-x,137-y)
     pyautogui.click(751,137)
     pyautogui.click(751+x,137+y)
 
-    pyautogui.click(836,994) #Warden
+    # pyautogui.click(836,994) #Warden
+    keyboard.press('e')
+    keyboard.release('e')
     pyautogui.click(1438+x,306-y)
     pyautogui.click(1438,306)
     pyautogui.click(1438-x,306+y)
 
-    pyautogui.click(958,991) #Queen
+    # pyautogui.click(958,991) #Rc
+    keyboard.press('r')
+    keyboard.release('r')
     pyautogui.click(1298-x,848-y)
     pyautogui.click(1298,848)
     pyautogui.click(1298+x,848+y)
 
 def deploy_cc(x=15,y=15):
+    keyboard.press('z')
+    keyboard.release('z')
     pyautogui.click(466,994)
     pyautogui.click(751-x,137-y)
     pyautogui.click(751,137)
     pyautogui.click(751+x,137+y)
 
 def deployTroop():
+
+    keyboard.press('a')
+    keyboard.release('a')
     deploy_spell()
+
+    keyboard.press('3')
+    keyboard.release('3')
     deploy_ed()
+    keyboard.press('1')
+    keyboard.release('1')
+    deploy_ed()
+    keyboard.press('2')
+    keyboard.release('2')
+    deploy_ed()
+
     deploy_hero()
-    deploy_cc()
+    # deploy_cc()
+
+    keyboard.press('z')
+    keyboard.release('z')
+    deploy_ed()
+    # keyboard.press('5')
+    # keyboard.release('5')
+    # deploy_ed()
+    # keyboard.press('6')
+    # keyboard.release('6')
+    # deploy_ed()
+    # keyboard.press('7')
+    # keyboard.release('7')
+    # deploy_ed()
 
 def clearNotice():
     pyautogui.click(1857,44)
@@ -963,6 +1011,7 @@ def find_returnHome_for_loot():
     image_path = "returnHome.png"  # Replace with your file name
 
     while True:
+        isGameRunning()
         try:
             location = pyautogui.locateOnScreen(image_path, confidence=0.8)
             if location:
@@ -1006,23 +1055,25 @@ def loot_loop(coords,coordsforLoot):
             print(f"Storage Empty Need Loot {home_exlier} < {home_resource_threshold}")
             zoom_out_for_loot()
             zoom_out_for_loot()
+            isGameRunning()
             attack_Button_for_looting()
             while True:
                 find_next_for_loot()
                 time.sleep(1)
                 enemy_elixer=enemy_resource_for_loot(*coordsforLoot)
                 if enemy_elixer>=loot_resource_threshold:
+                    isGameRunning()
                     print(f"Loot {enemy_elixer} Found Attacking...")
                     deployTroop()
                     find_returnHome_for_loot()
                     time.sleep(1)
                     break
                 else:
+                    isGameRunning()
                     pyautogui.click(1781,795)
                     pyautogui.click(1781,795)
                     time.sleep(1)
                     pass
-
 
 def change_account_after_error():
     image_path1 = "setting.png"
@@ -1050,7 +1101,7 @@ def change_account_after_error():
                     time.sleep(1)
                     pyautogui.click(1653,609)
                     find_supercellfordonation()
-                    find_black()
+                    find_loading()
                     break
                 else:
                     pass
@@ -1068,7 +1119,7 @@ gold_for_loot = (76,119,200,35)
 elixer_for_loot = (76,167,200,35)
 dark_elixer_for_loot = (76,215,200,35)
 
-home_resource_threshold=28000000
+home_resource_threshold=38000000
 loot_resource_threshold=1200000
 
 def main_loop(resource_type,donateOrNot):
@@ -1092,6 +1143,7 @@ def main_loop(resource_type,donateOrNot):
         coordsforLoot=dark_elixer_for_loot
 
     while True:
+        isGameRunning()
         change_account_after_error()
         status = home_resource_for_donate(*coords)
         if status > donate_threshold:
@@ -1105,18 +1157,15 @@ def main_loop(resource_type,donateOrNot):
 # Resource Type (1=Gold, 2=Elixir, 3=Dark Elixir)
 # Donate (1=Yes, 0=No)
 resource_type = 2
-donateOrNot=1
+donateOrNot=0
 
 while True:
     try:
         main_loop(resource_type,donateOrNot)
     except Exception as e:
+        isGameRunning()
         print(f"[ERROR] → Restarting app...")
         time.sleep(2)
-        # Restart the script itself
-        os.execv(sys.executable, ['python'] + sys.argv)
-        change_account_after_error()
-
 
 
 
