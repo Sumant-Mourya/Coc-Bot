@@ -1,15 +1,19 @@
-"""Clan Capital Raid Weekend: every account uses its raid attacks, quickly.
+"""Clan Capital Raid Weekend: every account uses its raid attacks on the enemy's Clan Capital.
 
 Raid Weekend runs from Friday 07:00 to Monday 07:00 UTC (12:30 India time). An account has 5 raid
 attacks (6 with the bonus); how many are left shows as a red badge ("5 ⚔") over the Clan Capital
-airship by the river. The quick way, no army to choose and no troops placed:
-  airship -> (raid summary: Next Raid / own Capital: Raid Map) -> the raid map -> a district ->
-  Attack -> "Attack Now?" Attack -> the battle starts -> close the game and open it again.
-The attack is over and counted when the game is back (checked: the badge goes 5 -> 4). Again until
-the badge is gone (no raid attack left).
+airship by the river, and over the Raid Map / Raid Info button. One account:
+  zoom out, the airship -> the clan's Clan Capital -> army: delete it, then Super Miners only, 1 Frost
+  and 2 Graveyard, Save -> Raid Map -> the first district from the top that is not destroyed yet (it
+  is attacked again until it is; the last four after swiping the map up; Capital Peak once it opens)
+  -> Attack -> zoom out and pan fully down and right: the deploy strip along the district's lower-right
+  side is then always at the same place -> the miners on one spot of it (more taps along the strip as
+  backup), the spells on the same spot -> the battle ends -> Map: the raid map again, until no raid
+  attack is left.
 """
 
 import datetime as dt
+import difflib
 import logging
 import re
 import time
@@ -30,12 +34,27 @@ UTC = dt.timezone.utc
 START = (4, 7)                     # Friday (weekday 4) 07:00 UTC
 LENGTH = dt.timedelta(days=3)      # to Monday 07:00 UTC
 
-# the raid map is always drawn the same way: its districts, tried in this order (Capital Peak opens last)
-DISTRICTS = [("Barbarian Camp", (1135, 560)), ("Wizard Valley", (925, 660)), ("Dragon Cliffs", (1290, 775)),
-             ("Balloon Lagoon", (745, 820)), ("Builder's Workshop", (1065, 860)), ("Golem Quarry", (550, 955)),
-             ("Goblin Mines", (1215, 990)), ("Skeleton Park", (870, 1000)), ("Capital Peak", (920, 390))]
+# the districts in the order they are attacked: from the top of the raid map down. The last four are on
+# screen after swiping the map up; Capital Peak opens when all the others are destroyed.
+ORDER = ["Barbarian Camp", "Wizard Valley", "Dragon Cliffs", "Balloon Lagoon", "Builder's Workshop",
+         "Golem Quarry", "Goblin Mines", "Skeleton Park", "Capital Peak"]
+LOW = ("Builder's Workshop", "Golem Quarry", "Goblin Mines", "Skeleton Park")
+LABEL_TO_HALL = 78                 # a district's hall is this far under its name label (battlefield px)
 BAR_ATTACK = (1045, 960, 120, 35)  # the district bar's Attack button (red = can attack, grey = no attack left)
 NOTICE = (470, 220, 990, 120)      # the game's red notice at the top of the raid map
+DIALOGS = ("raid/attack_now_title", "raid/attack_go")   # centred popups: looked for on the whole screen
+
+# the capital army: (card in Change Capital Army, taps) - as many Super Miners as fit, 1 Frost, 2 Graveyard
+ARMY = [("raid/unit_super_miner", 12), ("raid/spell_frost", 1), ("raid/spell_graveyard", 2)]
+
+# In a raid battle, zoomed out and panned fully down and right (the finger goes up and left), the deploy
+# strip along the district's lower-right side is on screen: everything is dropped on one spot of it
+# (battlefield points; on BlueStacks 1920x1080 the spot is at 560, 650 - all 10 miners went down there on
+# Barbarian Camp). Taps that do not deploy are made again along the strip, the nearest spots first.
+PAN = ((1466, 784), (623, 268))
+DEPLOY = (586, 643)
+BACKUP = [(-36, 22), (36, -22), (10, 16), (-10, -16), (-103, 64), (103, -64), (-183, 113), (183, -113)]
+BATTLE_CARDS = [("raid/battle_miner", 10), ("raid/battle_frost", 1), ("raid/battle_graveyard", 2)]
 
 
 def window(now=None):
@@ -74,19 +93,33 @@ def pending(bot, names):
     return [n for n in names if done.get(n) != "done"]
 
 
+def _save_state(bot):
+    if bot.state is not None:
+        config.save_state(bot.state)
+
+
 # ----------------------------------------------------------------------------- the village
 def _badges(frame):
-    """Red badges like the airship's "5 ⚔" (a rounded red box): [(x, y, w, h)]."""
+    """Red badges like the airship's "5 ⚔" (a rounded red box): [(x, y, w, h)]. The badge hangs over the
+    village, so its size goes with the village's (and a little with how far the pinch zoomed out)."""
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     m = (((hsv[:, :, 0] < 7) | (hsv[:, :, 0] > 173)) & (hsv[:, :, 1] > 150) & (hsv[:, :, 2] > 140)).astype(np.uint8)
     n, _, st, _ = cv2.connectedComponentsWithStats(m)
     out = []
     for i in range(1, n):
         x, y, w, h, a = st[i]
-        if space.s(48) <= w <= space.s(80) and space.s(35) <= h <= space.s(56) and a / (w * h) > 0.6 \
+        if space.f(44) <= w <= space.f(80) and space.f(32) <= h <= space.f(56) and a / (w * h) > 0.6 \
                 and space.s(200) < y < space.s(1000) and space.s(150) < x < space.s(1500):
             out.append((int(x), int(y), int(w), int(h)))
     return out
+
+
+def _digits(text):
+    """The number in a short OCR'd text, with the usual letter/digit mix-ups fixed (or None)."""
+    for a, b in (("S", "5"), ("s", "5"), ("l", "1"), ("I", "1"), ("O", "0"), ("o", "0")):
+        text = text.replace(a, b)
+    digits = re.sub(r"\D", "", text)
+    return int(digits) if digits else None
 
 
 def find_airship(bot):
@@ -109,46 +142,213 @@ def find_airship(bot):
         return None, 0
     x, y, w, h = max(found, key=lambda b: b[1])          # the lowest one: the airship is by the river
     text, conf = vision.text_reader.read_line(f, (x + space.s(4), y + space.s(2), w // 2, h - space.s(6)))
-    digits = re.sub(r"\D", "", text.replace("S", "5").replace("s", "5").replace("l", "1").replace("O", "0"))
-    left = int(digits) if digits and int(digits) <= 6 else 1
-    return (x, y, w, h), left
+    left = _digits(text)
+    return (x, y, w, h), (left if left and left <= 6 else 1)
 
 
 # ----------------------------------------------------------------------------- the Capital
+def _find(frame, key):
+    if key in DIALOGS:
+        return vision.find(frame, key, region=(0, 0, frame.shape[1], frame.shape[0]))
+    return vision.find(frame, key)
+
+
 def _wait_any(bot, keys, timeout):
     end = time.monotonic() + timeout
     while time.monotonic() < end:
         f = bot.shot()
         for k in keys:
-            if vision.templates.has(k) and vision.find(f, k):
+            if vision.templates.has(k) and _find(f, k):
                 return k
         control.sleep(0.5)
     return None
 
 
+def _red_share(frame, region):
+    """How much of a game-space region is bright red (badges, the Attack button)."""
+    x, y, w, h = region
+    p = cv2.cvtColor(frame[max(0, y):y + h, max(0, x):x + w], cv2.COLOR_BGR2HSV).reshape(-1, 3).astype(int)
+    if not len(p):
+        return 0.0
+    return float((((p[:, 0] < 8) | (p[:, 0] > 172)) & (p[:, 1] > 120) & (p[:, 2] > 120)).mean())
+
+
 def _red(frame, box):
-    x, y, w, h = space.region(*box)
-    p = cv2.cvtColor(frame[y:y + h, x:x + w], cv2.COLOR_BGR2HSV).reshape(-1, 3).astype(int)
-    return float((((p[:, 0] < 8) | (p[:, 0] > 172)) & (p[:, 1] > 120) & (p[:, 2] > 120)).mean()) > 0.3
+    return _red_share(frame, space.region(*box)) > 0.3
 
 
-def open_raid_map(bot, badge):
-    """Tap the airship (under its badge) and get to the raid map. True when it is on screen."""
+def open_capital(bot, badge):
+    """Tap the airship (under its badge). Returns the screen that opened: the clan's own Clan Capital
+    ("raid/capital_title"), the raid map ("raid/attacking_title"), the summary of the last raid
+    ("raid/next_raid") or None."""
     x, y, w, h = badge
     bot.tap(x + w // 2, y + h + space.s(75), jitter=3)
-    key = _wait_any(bot, ["raid/attacking_title", "raid/next_raid", "raid/capital_title"], 25)
-    if key == "raid/next_raid":                          # the summary of the last raid: Next Raid
+    return _wait_any(bot, ["raid/capital_title", "raid/attacking_title", "raid/next_raid"], 25)
+
+
+def attacks_left(frame):
+    """Raid attacks left: the number on the red badge over Raid Map / Raid Info (bottom right); 0 when
+    there is no badge, None when neither button is on screen."""
+    m = vision.find(frame, "raid/raid_map") or vision.find(frame, "raid/raid_info")
+    if not m:
+        return None
+    if _red_share(frame, (m.x - space.s(70), m.y - space.s(165), space.s(140), space.s(55))) < 0.3:
+        return 0
+    text, _ = vision.text_reader.read_line(frame, (m.x - space.s(45), m.y - space.s(160), space.s(50),
+                                                   space.s(45)))
+    left = _digits(text)
+    return left if left and left <= 6 else 1
+
+
+def _card(frame, key):
+    """A card that can still be used: found, and in colour - a full army greys the cards of the unit list,
+    and a used-up card of the battle bar turns grey (grey ~10, the pale Frost card ~58)."""
+    m = vision.find(frame, key)
+    if not m:
+        return None
+    x, y, w, h = m.box
+    return m if cv2.cvtColor(frame[y:y + h, x:x + w], cv2.COLOR_BGR2HSV)[:, :, 1].mean() > 30 else None
+
+
+def set_army(bot):
+    """Change Capital Army (the button bottom left of the Capital and of the raid map): delete the army,
+    then Super Miners only (as many as fit), 1 Frost and 2 Graveyard, Save. True when it was saved; when
+    a card is missing the window is cancelled and the army stays as it was."""
+    if not bot.tap_template("raid/army_button", timeout=5):
+        return False
+    title = bot.wait("raid/army_title", 8)
+    if not title:
+        return False
+    if bot.find("raid/army_trash"):                          # red while the army has units
+        bot.tap_template("raid/army_trash", timeout=2, after=0.8)
+    row = title.y + space.s(610)                             # the unit list, under the buttons
+    for _ in range(2):         # it starts with Super Barbarian: the Super Miner and the spells are at its end
+        bot.swipe((title.x + space.s(450), row), (title.x - space.s(450), row), 600)
+        control.sleep(0.6)
+    for key, taps in ARMY:
+        m = _card(bot.shot(), key)
+        if not m:
+            log.warning("Raid army: no %s to add (not unlocked in this clan?) - the army is left as it was",
+                        key.split("/")[1].replace("_", " "))
+            bot.save_error("raid-army")
+            bot.tap(title.x + space.s(30), title.y + space.s(331), jitter=3)    # Cancel
+            bot.wait_gone("raid/army_title", 5)
+            return False
+        bot.tap(m.x, m.y, jitter=4, times=taps, interval=0.25)
+        control.sleep(0.4)
+    bot.tap_template("raid/army_save", timeout=3)
+    return bot.wait_gone("raid/army_title", 6)
+
+
+def open_raid_map(bot):
+    """From the clan's Clan Capital to the raid map (past the summary of the last raid). True when it is
+    on screen."""
+    if not bot.tap_template("raid/raid_map", timeout=3):
+        return False
+    key = _wait_any(bot, ["raid/attacking_title", "raid/next_raid"], 15)
+    if key == "raid/next_raid":
         bot.tap_template("raid/next_raid", timeout=3)
         key = _wait_any(bot, ["raid/attacking_title"], 15)
-    elif key == "raid/capital_title":                    # the clan's own Capital: Raid Map
-        bot.tap_template("raid/raid_map", timeout=3)
-        key = _wait_any(bot, ["raid/attacking_title", "raid/next_raid"], 15)
-        if key == "raid/next_raid":
-            bot.tap_template("raid/next_raid", timeout=3)
-            key = _wait_any(bot, ["raid/attacking_title"], 15)
     return key == "raid/attacking_title"
 
 
+# ----------------------------------------------------------------------------- the raid map
+def _norm(text):
+    return re.sub(r"[^a-z]", "", text.lower())
+
+
+def _name_of(text):
+    """The district a label reads as (OCR mix-ups allowed), or None."""
+    t = _norm(text)
+    if len(t) < 5:
+        return None
+    ratio, name = max((difflib.SequenceMatcher(None, t, _norm(n)).ratio(), n) for n in ORDER)
+    return name if ratio >= 0.75 else None
+
+
+def _tappable(x, y):
+    """On screen and not under the raid map's buttons (Map and army bottom left, Raid Info bottom right)."""
+    if not (0 < x < space.w and 0 < y < space.h - space.s(40)):
+        return False
+    return not (y > space.h - space.s(240) and (x < space.s(340) or x > space.w - space.s(340)))
+
+
+def read_map(frame):
+    """The districts on screen: {name: {"hall": (x, y) to tap, or None when off screen / under a button,
+    "pct": destruction % or None, "locked": bool}}, from their name labels and the "0%" / "Locked" over
+    them."""
+    # only where district labels can be: not the clan name, timer and buttons along the edges (faster)
+    texts = vision.text_reader.read(frame, (space.s(300), space.s(140), space.w - space.s(600),
+                                            space.h - space.s(140)))
+    out = {}
+    for text, _, (x, y, w, h) in texts:
+        name = _name_of(text)
+        if not name or name in out:
+            continue
+        above = [t for t, _, (tx, ty, tw, th) in texts if y - space.s(50) <= ty < y and tx < x + w and tx + tw > x]
+        pct = next((_digits(t[:t.index("%")]) for t in above if "%" in t and _digits(t[:t.index("%")]) is not None),
+                   None)
+        hall = (x + w // 2, y + h + int(space.f(LABEL_TO_HALL)))
+        out[name] = {"hall": hall if _tappable(*hall) else None, "pct": pct,
+                     "locked": any("lock" in t.lower() for t in above)}
+    return out
+
+
+def _scroll(bot, down):
+    """Swipe the raid map to its bottom (the finger goes up: the last four districts) or back to its top."""
+    a, b = space.center(960, 880), space.center(960, 230)
+    for _ in range(2):
+        bot.swipe(a if down else b, b if down else a, 600)
+        control.sleep(0.5)
+    control.sleep(0.8)
+
+
+def _close_bar(bot):
+    bot.tap(*space.center(1650, 400), jitter=3)
+    control.sleep(0.6)
+
+
+def _bar_name(frame, bar):
+    """The district named on the bar under a tapped district (bar = its Scout button)."""
+    text, _ = vision.text_reader.read_line(frame, (bar.x - space.s(365), bar.y + space.s(8), space.s(245),
+                                                   space.s(42)))
+    return _name_of(text)
+
+
+def choose_district(bot):
+    """Tap the first district from the top that can still be attacked. Returns its name with its bar open
+    (Attack is red), or None when no district can be attacked now."""
+    _scroll(bot, down=False)
+    view, seen = "top", None
+    for name in ORDER:
+        control.checkpoint()
+        want = "low" if name in LOW else "top"
+        if want != view:
+            _scroll(bot, down=want == "low")
+            view, seen = want, None
+        if seen is None:
+            seen = read_map(bot.shot())
+        d = seen.get(name)
+        if d is None or not d["hall"] or d["locked"] or (d["pct"] or 0) >= 100:
+            continue                                     # not read, locked or destroyed
+        bot.tap(*d["hall"], jitter=4)
+        control.sleep(1.0)
+        f = bot.shot()
+        bar = vision.find(f, "raid/district_bar")
+        if not bar:
+            continue
+        on_bar = _bar_name(f, bar)
+        if on_bar != name or not _red(f, BAR_ATTACK):
+            log.info("Raid: %s cannot be attacked (%s)", name,
+                     f"the tap opened {on_bar}" if on_bar != name else "destroyed, or no raid attack left")
+            _close_bar(bot)
+            continue
+        log.info("Raid: next district %s (%s%% destroyed)", name, d["pct"] if d["pct"] is not None else "?")
+        return name
+    return None
+
+
+# ----------------------------------------------------------------------------- the battle
 def _not_allowed(frame):
     """The game's notice "Only members who were in the clan before the Raid Weekend began can attack!"
     (an account that joined the clan during the weekend; Elders and up can attack anyway)."""
@@ -174,46 +374,83 @@ def _wait_battle(bot, timeout):
 
 
 def start_attack(bot):
-    """On the raid map: a district that can be attacked -> Attack -> "Attack Now?" Attack. Returns
-    (district, "started") once the battle has started, (None, "none") when no district can be attacked
-    (no raid attack left), or (district, "failed") when the attack did not start."""
-    for name, (x, y) in DISTRICTS:
+    """The district's bar is open: Attack (-> "Attack Now?" Attack) until the battle has started.
+    Returns "started", "not_allowed" or "failed"."""
+    x0, y0, w0, h0 = space.region(*BAR_ATTACK)
+    key = None
+    for _ in range(3):                               # a tap while the bar slides in is lost: again
+        bot.tap(x0 + w0 // 2, y0 + h0 // 2, jitter=3)
+        key = _wait_any(bot, ["raid/attack_now_title", "raid/battle_starts", "battle/surrender"], 5)
+        if key:
+            break
+    for _ in range(3):
+        if key != "raid/attack_now_title":
+            break
+        m = _find(bot.shot(), "raid/attack_go")
+        if m:
+            bot.tap_match(m)
+        got = _wait_battle(bot, 8)
+        if got == "not_allowed":
+            return "not_allowed"
+        key = "raid/battle_starts" if got == "battle" else _wait_any(bot, ["raid/attack_now_title"], 1)
+    if key in ("raid/battle_starts", "battle/surrender"):
+        return "started"
+    bot.save_error("raid-no-battle")
+    return "failed"
+
+
+def deploy(bot):
+    """In the raid battle: zoom out, pan fully down and right, then each card of the army on the deploy
+    spot - the Super Miners first. While a card still has something left (a tap that did not deploy, or a
+    bigger army), one more tap at a time along the strip."""
+    bot.device.zoom_out()
+    control.sleep(0.5)
+    for _ in range(4):
+        bot.swipe(space.center(*PAN[0]), space.center(*PAN[1]), 500)
+        control.sleep(0.3)
+    control.sleep(0.8)
+    spot = space.center(*DEPLOY)
+    backup = [(spot[0] + int(space.f(dx)), spot[1] + int(space.f(dy))) for dx, dy in BACKUP]
+    for key, taps in BATTLE_CARDS:
         control.checkpoint()
-        bot.tap(*space.center(x, y), jitter=4)
-        control.sleep(1.0)
-        f = bot.shot()
-        if not vision.find(f, "raid/district_bar"):
-            continue                                     # destroyed / locked / not on this map
-        if not _red(f, BAR_ATTACK):
-            log.info("Raid: %s cannot be attacked (no raid attack left, or destroyed)", name)
-            bot.tap(*space.center(1650, 400), jitter=3)   # close the district bar
-            control.sleep(0.6)
+        card = _card(bot.shot(), key)
+        if not card:
+            log.info("Raid: no %s to deploy", key.split("_", 1)[1])
             continue
-        x0, y0, w0, h0 = space.region(*BAR_ATTACK)
-        key = None
-        for _ in range(3):                               # a tap while the bar slides in is lost: again
-            bot.tap(x0 + w0 // 2, y0 + h0 // 2, jitter=3)
-            key = _wait_any(bot, ["raid/attack_now_title", "raid/battle_starts", "battle/surrender"], 5)
-            if key:
+        bot.tap_match(card)
+        control.sleep(0.3)
+        bot.tap(*spot, jitter=2, times=taps, interval=0.2)
+        for x, y in backup * 2:
+            control.sleep(0.4)
+            if not _card(bot.shot(), key):
                 break
-        for _ in range(3):
-            if key != "raid/attack_now_title":
+            bot.tap(x, y, jitter=2)
+        else:
+            log.warning("Raid: some %s could not be deployed on the strip", key.split("_", 1)[1])
+            bot.save_error("raid-deploy")
+        control.sleep(0.4)
+
+
+def finish_battle(bot, timeout=240):
+    """Wait until the raid battle is over and the raid map is back. True when it is."""
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        f = bot.shot()
+        if _find(f, "raid/attacking_title"):
+            return True
+        for k in ("raid/battle_end", "raid/return_map"):
+            m = vision.templates.has(k) and _find(f, k)
+            if m:
+                bot.tap_match(m)
+                control.sleep(1.5)
                 break
-            bot.tap_template("raid/attack_go", timeout=3)
-            got = _wait_battle(bot, 8)
-            if got == "not_allowed":
-                return name, "not_allowed"
-            key = "raid/battle_starts" if got == "battle" else _wait_any(bot, ["raid/attack_now_title"], 1)
-        if key in ("raid/battle_starts", "battle/surrender"):
-            return name, "started"
-        log.info("Raid: the attack on %s did not start", name)
-        bot.save_error("raid-no-battle")
-        return name, "failed"
-    return None, "none"
+        control.sleep(1.0)
+    bot.save_error("raid-battle-end")
+    return False
 
 
 def restart(bot):
-    """Close the game and open it again: the raid attack ends there and counts."""
+    """Close the game and open it again (to get out of a screen the bot does not know)."""
     bot.device.close_game()
     end = time.monotonic() + 20
     while bot.device.is_game_running() and time.monotonic() < end:
@@ -222,63 +459,102 @@ def restart(bot):
     states.ensure_game(bot)
 
 
+def leave(bot):
+    """From the raid map back to the village: Map -> the Clan Capital -> Return Home (else restart)."""
+    for key in ("raid/map_button", "raid/return_home"):
+        if not bot.tap_template(key, timeout=8, after=2.0):
+            break
+    if not go_home(bot, 30):
+        restart(bot)
+
+
 # ----------------------------------------------------------------------------- one account
 def run(bot, account, max_attacks=6):
     """Use this account's raid attacks. Returns the number of raid attacks made."""
-    active, _, end = window()
+    active, _, _ = window()
     if not active:
         return 0
+    name = account["name"]
     done = _done(bot)
-    if done.get(account["name"]) == "done":
+    if done.get(name) == "done":
+        return 0
+    badge, left = find_airship(bot)
+    if badge is None:
+        log.info("%s: no raid attack left this Raid Weekend", name)
+        done[name] = "done"
+        _save_state(bot)
+        return 0
+    screen = open_capital(bot, badge)
+    if screen == "raid/next_raid":                   # the summary of the last raid: Next Raid
+        bot.tap_template("raid/next_raid", timeout=3)
+        screen = _wait_any(bot, ["raid/attacking_title"], 15)
+    if screen is None:
+        log.info("%s: the Clan Capital did not open (a game tutorial still pending?) - skipped this Raid "
+                 "Weekend", name)
+        bot.save_error("raid-no-capital")
+        done[name] = "done"                          # not tried again and again this weekend
+        _save_state(bot)
+        restart(bot)
+        return 0
+    left = attacks_left(bot.shot())
+    if left == 0:
+        log.info("%s: no raid attack left this Raid Weekend", name)
+        done[name] = "done"
+        _save_state(bot)
+        leave(bot)
+        return 0
+    log.info("%s: %s raid attack(s) left - setting the army: Super Miners, 1 Frost, 2 Graveyard", name, left)
+    bot.status(account=name, action="Raid: setting the army")
+    if not set_army(bot):
+        log.warning("%s: the capital army was not changed - attacking with the army it has", name)
+    if screen != "raid/attacking_title" and not open_raid_map(bot):
+        log.info("%s: the raid map did not open", name)
+        bot.save_error("raid-no-map")
+        leave(bot)
         return 0
     made, failed = 0, 0
-    for _ in range(max_attacks + 3):
+    while made < max_attacks:
         control.checkpoint()
-        badge, left = find_airship(bot)
-        if badge is None:
-            log.info("%s: no raid attack left this Raid Weekend", account["name"])
-            done[account["name"]] = "done"
+        left = attacks_left(bot.shot())
+        if left == 0:
+            log.info("%s: no raid attack left", name)
+            done[name] = "done"
             break
-        if made >= max_attacks:
+        bot.status(account=name, action=f"Raid attack {made + 1} ({left} left)")
+        district = choose_district(bot)
+        if district is None:
+            if bot.tap_template("raid/next_raid", timeout=2):
+                _wait_any(bot, ["raid/attacking_title"], 15)     # this raid is over: on to the next clan
+                continue
+            log.info("%s: no district can be attacked now", name)
+            bot.save_error("raid-no-district")
             break
-        log.info("%s: %d raid attack(s) left - starting one", account["name"], left)
-        bot.status(account=account["name"], action=f"Raid attack {made + 1} ({left} left)")
-        if not open_raid_map(bot, badge):
-            log.info("%s: the Clan Capital raid did not open (a game tutorial still pending?) - skipped this "
-                     "Raid Weekend", account["name"])
-            bot.save_error("raid-no-map")
-            done[account["name"]] = "done"             # not tried again and again this weekend
-            restart(bot)
-            break
-        district, status = start_attack(bot)
-        if status == "none":
-            log.info("%s: nothing to attack on the raid map now", account["name"])
-            restart(bot)
-            done[account["name"]] = "done"
-            break
+        status = start_attack(bot)
         if status == "not_allowed":
             log.info("%s: joined the clan after this Raid Weekend began - the game lets it raid only if promoted "
-                     "(Elder) or the clan is Invite Only; skipped this weekend", account["name"])
-            done[account["name"]] = "done"
-            restart(bot)
+                     "(Elder) or the clan is Invite Only; skipped this weekend", name)
+            done[name] = "done"
             break
         if status == "failed":
-            restart(bot)                                 # try again (not counted as done)
             failed += 1
+            log.info("%s: the raid attack on %s did not start", name, district)
             if failed >= 2:
-                log.info("%s: raid attacks did not start twice - looked at again later", account["name"])
                 break
+            _close_bar(bot)
             continue
-        log.info("%s: raid attack on %s started - restarting the game to end it", account["name"], district)
-        restart(bot)
+        log.info("%s: raid attack on %s", name, district)
+        deploy(bot)
         made += 1
         bot.stats["raids"] = bot.stats.get("raids", 0) + 1
-        if bot.state is not None:
-            config.save_state(bot.state)
-    if bot.state is not None:
-        config.save_state(bot.state)
+        _save_state(bot)
+        if not finish_battle(bot):
+            log.warning("%s: the raid battle did not end on the raid map - restarting the game", name)
+            restart(bot)
+            break
+    _save_state(bot)
     if made:
-        log.info("%s: %d raid attack(s) made", account["name"], made)
+        log.info("%s: %d raid attack(s) made", name, made)
+    leave(bot)
     return made
 
 

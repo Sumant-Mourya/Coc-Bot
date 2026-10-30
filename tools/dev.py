@@ -28,7 +28,7 @@ import win32gui  # noqa: E402
 
 from bot import paths  # noqa: E402
 from bot.core import vision  # noqa: E402
-from bot.core.devices import AdbDevice, PcDevice  # noqa: E402
+from bot.core.devices import AdbDevice, BlueStacksDevice, PcDevice  # noqa: E402
 from bot.core.window import bring_to_front  # noqa: E402
 
 DEV = os.path.join(paths.LOGS, "dev")
@@ -43,6 +43,8 @@ def load(name):
 def main(argv):
     if argv[:1] == ["--adb"]:
         dev, argv = AdbDevice(argv[1]), argv[2:]
+    elif argv[:1] == ["--bluestacks"]:
+        dev, argv = BlueStacksDevice(), argv[1:]
     else:
         dev = PcDevice()
     cmd, args = (argv[0], argv[1:]) if argv else ("help", [])

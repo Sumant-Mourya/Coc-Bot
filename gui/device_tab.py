@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QButtonGroup, QFileDialog, QLineEdit, QVBoxLayout, QWidget
 
 from bot import paths
-from bot.core.devices import EMULATOR_PORTS, find_adb, adb_devices
+from bot.core.devices import EMULATOR_PORTS, BlueStacks, find_adb, adb_devices
 from bot.core.profile import Profile
 from gui import icons
 from gui import theme as T
@@ -28,16 +28,29 @@ class DeviceTab(QWidget):
 
         # --- device ---
         dev = Card("Where does Clash of Clans run?", icon="plug")
+        self.bs_card = ChoiceCard("BlueStacks", "BlueStacks 5 on this PC: the bot starts it and finds its ADB address",
+                                  "box", T.GREEN)
         self.pc_card = ChoiceCard("Google Play Games", "On this PC: the bot clicks in the game window", "monitor",
-                                  T.GOLD, lines=2)
-        self.adb_card = ChoiceCard("Android over ADB", "BlueStacks, LDPlayer, MuMu, Nox or a phone", "phone",
-                                   "#5cc8ff", lines=2)
+                                  T.GOLD)
+        self.adb_card = ChoiceCard("Android over ADB", "LDPlayer, MuMu, Nox, MEmu or a phone", "phone", "#5cc8ff")
         self.type_group = QButtonGroup(self)
         self.type_group.setExclusive(True)
-        self.type_group.addButton(self.pc_card)
-        self.type_group.addButton(self.adb_card)
-        dev.add(hbox(self.pc_card, self.adb_card, spacing=12))
-        self.pc_card.toggled.connect(self._type_changed)
+        for card in (self.bs_card, self.pc_card, self.adb_card):
+            self.type_group.addButton(card)
+            dev.add(card)
+        self.type_group.buttonToggled.connect(lambda _, on: on and self._type_changed())
+
+        self.bs_box = QWidget()
+        bl = QVBoxLayout(self.bs_box)
+        bl.setContentsMargins(0, 4, 0, 0)
+        bl.setSpacing(12)
+        self.bs = None
+        self.bs_instance = Combo()
+        bl.addWidget(field("BlueStacks instance", self.bs_instance,
+                           "BlueStacks is started when it is not running; its ADB address is read from BlueStacks."))
+        self.bs_note = Banner("", "warning")
+        bl.addWidget(self.bs_note)
+        dev.add(self.bs_box)
 
         self.pc_box = QWidget()
         pl = QVBoxLayout(self.pc_box)
@@ -128,12 +141,50 @@ class DeviceTab(QWidget):
         self.profile.currentIndexChanged.connect(self.changed)
         self.minimize.toggled.connect(self.changed)
         self.error_shots.toggled.connect(self.changed)
+        self.bs_instance.currentIndexChanged.connect(self._bs_note)
+        self.bs_instance.currentIndexChanged.connect(self.changed)
+        self.profile.currentIndexChanged.connect(self._bs_note)
+
+    def _type(self):
+        return "bluestacks" if self.bs_card.isChecked() else "adb" if self.adb_card.isChecked() else "pc"
 
     def _type_changed(self, *_):
-        pc = self.pc_card.isChecked()
-        self.pc_box.setVisible(pc)
-        self.adb_box.setVisible(not pc)
+        kind = self._type()
+        self.bs_box.setVisible(kind == "bluestacks")
+        self.pc_box.setVisible(kind == "pc")
+        self.adb_box.setVisible(kind == "adb")
         self.changed.emit()
+
+    def _load_bs(self, selected):
+        """Fill the instance list from BlueStacks' own settings."""
+        self.bs = BlueStacks.find()
+        self.bs_instance.blockSignals(True)
+        self.bs_instance.clear()
+        for i in (self.bs.instances() if self.bs else []):
+            size = "×".join(map(str, i["size"])) if i["size"] else "size ?"
+            self.bs_instance.addItem(f"{i['name']} · {i['title']} · 127.0.0.1:{i['port']} · {size}", i)
+        idx = next((n for n in range(self.bs_instance.count())
+                    if self.bs_instance.itemData(n)["name"] == selected), 0)
+        self.bs_instance.setCurrentIndex(idx)
+        self.bs_instance.blockSignals(False)
+        self._bs_note()
+
+    def _bs_note(self, *_):
+        """What still has to be set in BlueStacks (nothing = no note)."""
+        inst = self.bs_instance.currentData()
+        want = Profile(self.profile.currentText()).size if self.profile.currentText() else (1920, 1080)
+        if not self.bs:
+            text, kind = "BlueStacks 5 is not installed on this PC.", "error"
+        elif not inst:
+            text, kind = "BlueStacks has no instance yet: open BlueStacks once.", "error"
+        elif not self.bs.adb_enabled():
+            text, kind = "Switch on ADB in BlueStacks: Settings › Advanced › Android Debug Bridge.", "error"
+        elif inst["size"] and inst["size"] != want:
+            text, kind = (f"BlueStacks' screen is {inst['size'][0]}×{inst['size'][1]}: set it to {want[0]}×{want[1]} "
+                          "(BlueStacks Settings › Display), the size the bot is checked with.", "warning")
+        else:
+            text, kind = "", None
+        self.bs_note.set(text, kind)
 
     def _browse_shortcut(self):
         path, _ = QFileDialog.getOpenFileName(self, "Clash of Clans shortcut", os.path.dirname(self.shortcut.text()),
@@ -177,7 +228,7 @@ class DeviceTab(QWidget):
 
     def load(self, settings, accounts):
         d = settings["device"]
-        (self.adb_card if d.get("type") == "adb" else self.pc_card).setChecked(True)
+        {"bluestacks": self.bs_card, "adb": self.adb_card}.get(d.get("type"), self.pc_card).setChecked(True)
         self.shortcut.setText(d.get("shortcut_path", ""))
         self.shortcut.setCursorPosition(0)
         self.shortcut.setToolTip(self.shortcut.text())
@@ -185,6 +236,7 @@ class DeviceTab(QWidget):
         self.adb_path.setText(d.get("adb_path", ""))
         self.serial.setCurrentText(d.get("adb_serial", ""))
         self.reload_profiles(settings.get("profile"))
+        self._load_bs(d.get("bluestacks_instance", ""))
         for k, e in self.hotkeys.items():
             e.setText(settings.get("hotkeys", {}).get(k, "").upper())
         self.minimize.setChecked(settings.get("minimize_on_start", True))
@@ -201,7 +253,9 @@ class DeviceTab(QWidget):
 
     def apply(self, settings, accounts):
         d = settings["device"]
-        d["type"] = "adb" if self.adb_card.isChecked() else "pc"
+        d["type"] = self._type()
+        inst = self.bs_instance.currentData()
+        d["bluestacks_instance"] = inst["name"] if inst and self.bs_instance.currentIndex() > 0 else ""
         d["shortcut_path"] = self.shortcut.text().strip()
         d["window_title"] = self.window_title.text().strip() or "Clash of Clans"
         d["adb_path"] = self.adb_path.text().strip()

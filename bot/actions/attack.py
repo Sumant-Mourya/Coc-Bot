@@ -435,7 +435,7 @@ def deploy_clone_groups(bot, plan, frame, slots, by_key, card_of, ring, centre):
         tx, ty = centre[1] - spot[1], spot[0] - centre[0]
         d = math.hypot(tx, ty) or 1.0
         for i in range(1, n):
-            k = ((i + 1) // 2) * (1 if i % 2 else -1) * space.s(GROUP_SPREAD)
+            k = ((i + 1) // 2) * (1 if i % 2 else -1) * space.f(GROUP_SPREAD)
             bot.tap(int(spot[0] + tx / d * k), int(spot[1] + ty / d * k), jitter=2)
             time.sleep(0.07)
         if clone_x is not None and cast < clones:
@@ -443,7 +443,7 @@ def deploy_clone_groups(bot, plan, frame, slots, by_key, card_of, ring, centre):
             ok = select(bot, {"key": clone_key, "slot": slots.index(clone_x) + 1 if clone_x in slots else None},
                         slots)
             if ok:
-                bot.tap(*_toward(spot, centre, space.s(CLONE_IN)), jitter=2)
+                bot.tap(*_toward(spot, centre, space.f(CLONE_IN)), jitter=2)
                 cast += 1
                 time.sleep(0.1)
     # Clones left over (more Clones than groups): on the groups again, in the same order
@@ -451,7 +451,7 @@ def deploy_clone_groups(bot, plan, frame, slots, by_key, card_of, ring, centre):
         spot = groups[cast % len(groups)][0]
         if not select(bot, {"key": clone_key, "slot": slots.index(clone_x) + 1 if clone_x in slots else None}, slots):
             break
-        bot.tap(*_toward(spot, centre, space.s(CLONE_IN + 30)), jitter=2)
+        bot.tap(*_toward(spot, centre, space.f(CLONE_IN + 30)), jitter=2)
         cast += 1
         time.sleep(0.1)
     if clone_key and cast:
@@ -479,7 +479,7 @@ def _land(bot, cx, spot, centre, tries=4):
                     return p                          # (count not read before: it changed)
             log.debug("deploy spot %s: nothing came out", p)
         outward = deployzone.in_diamond(p[0], p[1], inset=-deployzone.MAP_GROW)
-        p = _nudge(p, centre, outward=outward, step=space.s(40))
+        p = _nudge(p, centre, outward=outward, step=space.f(40))
     return None
 
 

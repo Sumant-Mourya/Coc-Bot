@@ -12,6 +12,12 @@ edges, while the village stays centred. So the bot:
   3. keeps battlefield points (deploy positions) centred.
 
 With a 16:9 device all of this is the identity, so nothing changes there.
+
+Clash of Clans on Android draws its interface bigger than on Google Play Games (BlueStacks:
+1.2x at any resolution or DPI). The device's `ui_scale` shrinks its picture by that much first,
+so a 1920x1080 BlueStacks becomes a 1600x900 game space in which the PC pictures fit. The
+village does not grow as much, so battlefield points and lengths are scaled by the device's
+`field_scale` (the village at full zoom-out in game space, relative to the PC's).
 """
 
 import logging
@@ -25,21 +31,22 @@ class Space:
     def __init__(self):
         self.native = None          # (w, h) of the device in its own pixels
         self.scale = 1.0            # native pixels per game-space pixel
+        self.field = 1.0            # battlefield size in game space relative to the base screen
         self.w, self.h = profile.size
 
     @property
     def base(self):
         return profile.size
 
-    def update(self, native_w, native_h):
+    def update(self, native_w, native_h, ui_scale=1.0, field_scale=1.0):
         bw, bh = self.base
-        s = min(native_w / bw, native_h / bh)
+        s = min(native_w / bw, native_h / bh) * ui_scale
         w, h = round(native_w / s), round(native_h / s)
-        if (native_w, native_h) != self.native:
-            self.native = (native_w, native_h)
-            self.scale, self.w, self.h = s, w, h
-            log.info("Game screen %dx%d (aspect %.2f) -> game space %dx%d, scale %.3f",
-                     native_w, native_h, native_w / native_h, w, h, s)
+        if (native_w, native_h, ui_scale, field_scale) != self.native:
+            self.native = (native_w, native_h, ui_scale, field_scale)
+            self.scale, self.w, self.h, self.field = s, w, h, field_scale
+            log.info("Game screen %dx%d (aspect %.2f, interface x%.2f, village x%.2f) -> game space %dx%d, "
+                     "scale %.3f", native_w, native_h, native_w / native_h, ui_scale, field_scale, w, h, s)
             if abs(native_w / native_h - bw / bh) > 0.02:
                 log.info("The aspect ratio differs from the %dx%d profile; buttons are mapped by screen "
                          "edge. If something is not found, re-capture it in the Templates tab.", bw, bh)
@@ -87,8 +94,13 @@ class Space:
         return round(self._ax(x, cx)), round(self._ay(y, cy)), int(w), int(h)
 
     def center(self, x, y):
-        """A battlefield/village point: stays centred."""
-        return round(x + self.dx / 2), round(y + self.dy / 2)
+        """A battlefield/village point: stays centred (and scaled with the battlefield)."""
+        bw, bh = self.base
+        return round(self.w / 2 + (x - bw / 2) * self.field), round(self.h / 2 + (y - bh / 2) * self.field)
+
+    def f(self, length):
+        """A battlefield length measured on the base screen at full zoom-out, in game space."""
+        return length * self.field
 
     # --- game space -> base (when saving captures) ---------------------------------------
     def region_to_base(self, x, y, w, h):
@@ -96,9 +108,10 @@ class Space:
             return [int(x), int(y), int(w), int(h)]
         bw, bh = self.base
         cx, cy = x + w / 2, y + h / 2
-        # undo the shift that region() would apply for a region at this place
-        fx = 0 if cx < bw / 3 else (1 if cx > 2 * bw / 3 + self.dx else 0.5)
-        fy = 0 if cy < bh / 3 else (1 if cy > 2 * bh / 3 + self.dy else 0.5)
+        # undo the shift that region() would apply for a region at this place; the thirds meet halfway
+        # between where region() puts them (they overlap when the game space is smaller than the base)
+        fx = 0 if cx < bw / 3 + self.dx / 4 else (1 if cx > 2 * bw / 3 + 3 * self.dx / 4 else 0.5)
+        fy = 0 if cy < bh / 3 + self.dy / 4 else (1 if cy > 2 * bh / 3 + 3 * self.dy / 4 else 0.5)
         return [int(round(x - fx * self.dx)), int(round(y - fy * self.dy)), int(w), int(h)]
 
 

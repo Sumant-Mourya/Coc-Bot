@@ -39,7 +39,8 @@ STEPS = [
     Step("bb_upgrade", "Builder Base upgrade", "hammer",
          "New buildings first, then your list, then the Builder Hall", True, "builder"),
     Step("raid", "Clan Capital raid", "castle",
-         "Raid Weekend only: each account starts its raid attacks, the game is restarted to end each one", True, "home"),
+         "Raid Weekend only: each account sets Super Miners + Frost + 2 Graveyard and attacks the districts from "
+         "the top down", True, "home"),
     Step("home_research", "Home research", "flask",
          "Start Laboratory research from your list when the lab is free", True, "home"),
     Step("bb_research", "Builder Base research", "flask",

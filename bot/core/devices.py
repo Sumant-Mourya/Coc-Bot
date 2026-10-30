@@ -1,13 +1,15 @@
 """Device backends: where screenshots come from and where taps go.
 
-  PcDevice   Google Play Games on Windows (PrintWindow capture + real mouse/keyboard)
-  AdbDevice  An Android emulator over ADB: BlueStacks, LDPlayer, MuMu, Nox, MEmu
+  PcDevice          Google Play Games on Windows (PrintWindow capture + real mouse/keyboard)
+  AdbDevice         An Android emulator over ADB: BlueStacks, LDPlayer, MuMu, Nox, MEmu
+  BlueStacksDevice  BlueStacks 5 on this PC (the default): found and started by the bot, then ADB
 
 The bot works in "game space" (see space.py): the device image scaled uniformly
 to the profile's height (1080), so any window size or aspect ratio works.
 """
 
 import logging
+import os
 import shutil
 import subprocess
 import threading
@@ -28,6 +30,8 @@ COC_PACKAGE = "com.supercell.clashofclans"
 class Device:
     kind = "device"
     supports_keys = False
+    ui_scale = 1.0          # how much bigger the game draws its interface than on Google Play Games (space.py)
+    field_scale = 1.0       # the village at full zoom-out in game space, relative to Google Play Games
 
     def __init__(self):
         self._native = None   # (w, h)
@@ -79,7 +83,7 @@ class Device:
         frame = self._capture_native()
         h, w = frame.shape[:2]
         self._native = (w, h)
-        gw, gh = space.update(w, h)
+        gw, gh = space.update(w, h, self.ui_scale, self.field_scale)
         if (w, h) != (gw, gh):
             interp = cv2.INTER_AREA if w > gw else cv2.INTER_LINEAR
             frame = cv2.resize(frame, (gw, gh), interpolation=interp)
@@ -531,9 +535,143 @@ class AdbDevice(Device):
             self._shell.kill()
 
 
+# =============================================================================
+# BlueStacks 5 (this PC)
+# =============================================================================
+
+class BlueStacks:
+    """BlueStacks 5 as installed on this PC: its programs, and its instances as written in its own
+    settings file (bluestacks.conf): name, title, ADB port and screen size."""
+
+    def __init__(self, install_dir, data_dir):
+        self.player = os.path.join(install_dir, "HD-Player.exe")
+        self.adb = os.path.join(install_dir, "HD-Adb.exe")
+        self.conf = os.path.join(data_dir, "bluestacks.conf")
+
+    @classmethod
+    def find(cls):
+        """The installed BlueStacks 5, or None."""
+        import winreg
+        install, data = r"C:\Program Files\BlueStacks_nxt", r"C:\ProgramData\BlueStacks_nxt"
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\BlueStacks_nxt", 0,
+                                winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as k:
+                install = winreg.QueryValueEx(k, "InstallDir")[0]
+                data = winreg.QueryValueEx(k, "UserDefinedDir")[0]
+        except OSError:
+            pass
+        bs = cls(install, data)
+        return bs if os.path.exists(bs.player) and os.path.exists(bs.conf) else None
+
+    def _values(self):
+        out = {}
+        with open(self.conf, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                key, _, value = line.strip().partition("=")
+                out[key] = value.strip('"')
+        return out
+
+    def adb_enabled(self):
+        return self._values().get("bst.enable_adb_access") == "1"
+
+    def instances(self):
+        """[{"name", "title", "port", "size"}], the main instance (Pie64, Nougat64 ...) before its clones."""
+        per = {}
+        for key, value in self._values().items():
+            if key.startswith("bst.instance."):
+                name, _, field = key[len("bst.instance."):].partition(".")
+                per.setdefault(name, {})[field] = value
+        found = []
+        for name, v in per.items():
+            port = v.get("status.adb_port") or v.get("adb_port")     # status.* = where it runs right now
+            if not port or not port.isdigit():
+                continue
+            try:
+                size = (int(v["fb_width"]), int(v["fb_height"]))
+            except (KeyError, ValueError):
+                size = None
+            found.append({"name": name, "title": v.get("display_name") or name, "port": int(port), "size": size})
+        found.sort(key=lambda i: ("_" in i["name"], i["name"]))      # clones are Pie64_1, Pie64_2 ...
+        return found
+
+    def instance(self, name=""):
+        """The instance called `name`; empty = the main one."""
+        found = self.instances()
+        if not found:
+            raise RuntimeError("BlueStacks has no instance yet: open BlueStacks once")
+        for i in found:
+            if not name or i["name"] == name:
+                return i
+        raise RuntimeError(f"BlueStacks instance '{name}' not found (there are: " +
+                           ", ".join(i["name"] for i in found) + "): choose one on the Device page")
+
+    def start(self, name):
+        subprocess.Popen([self.player, "--instance", name], close_fds=True,
+                         creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP)
+
+
+class BlueStacksDevice(AdbDevice):
+    """BlueStacks 5 on this PC over ADB. The instance and its ADB port are read from BlueStacks' own
+    settings, so nothing has to be typed in; BlueStacks is started when it is not running (also when it
+    was closed during a run), and only that instance is used, never a phone that is on ADB as well."""
+
+    BOOT_SECONDS = 150
+    ui_scale = 1.2          # measured at 1920x1080 with 160 and 240 DPI: every button 1.2x the PC picture
+    field_scale = 0.89      # village border at full zoom-out: half-width 656 game-space px vs the PC's 734
+
+    def __init__(self, instance="", adb_path="", package=COC_PACKAGE):
+        self.bs = BlueStacks.find()
+        if not self.bs:
+            raise RuntimeError("BlueStacks 5 is not installed on this PC")
+        self.inst = self.bs.instance(instance)
+        # the PC's own adb first: two adb versions keep restarting each other's server (and drop the phone)
+        super().__init__(f"127.0.0.1:{self.inst['port']}", adb_path or find_adb() or self.bs.adb, package)
+
+    def describe(self):
+        title = self.inst["title"]
+        return f"{title if 'bluestacks' in title.lower() else 'BlueStacks ' + title} ({self.serial})"
+
+    def _booted(self):
+        try:
+            subprocess.run([self.adb, "connect", self.serial], capture_output=True, timeout=15,
+                           creationflags=subprocess.CREATE_NO_WINDOW)
+            return self._run("shell", "getprop", "sys.boot_completed", timeout=10).strip() == "1"
+        except subprocess.TimeoutExpired:
+            return False
+
+    def connect(self):
+        if not self._booted():
+            if not self.bs.adb_enabled():
+                raise RuntimeError("ADB is off in BlueStacks: switch it on in BlueStacks Settings > Advanced > "
+                                   "Android Debug Bridge")
+            log.info("Starting BlueStacks (%s)...", self.inst["name"])
+            self.bs.start(self.inst["name"])
+            end = time.monotonic() + self.BOOT_SECONDS
+            while not self._booted():
+                if time.monotonic() > end:
+                    raise RuntimeError(f"BlueStacks did not start within {self.BOOT_SECONDS} s")
+                time.sleep(3)
+                self.inst = self.bs.instance(self.inst["name"])      # the port can change when it starts
+                self.serial = f"127.0.0.1:{self.inst['port']}"
+            log.info("BlueStacks is up")
+        super().connect()
+        from .profile import profile
+        if self.inst["size"] and self.inst["size"] != profile.size:
+            log.warning("BlueStacks' screen is %dx%d: set it to %dx%d (BlueStacks Settings > Display), the size the "
+                        "bot is checked with, so buttons, numbers and the village are found reliably",
+                        *self.inst["size"], *profile.size)
+
+    def launch_game(self):
+        if not self._booted():          # BlueStacks was closed: start it again first
+            self.connect()
+        super().launch_game()
+
+
 def make_device(settings):
     """Create the device chosen in Settings."""
     d = settings["device"]
+    if d["type"] == "bluestacks":
+        return BlueStacksDevice(d.get("bluestacks_instance", ""), d.get("adb_path", ""))
     if d["type"] == "adb":
         return AdbDevice(d.get("adb_serial", ""), d.get("adb_path", ""))
     return PcDevice(d.get("shortcut_path", ""), d.get("window_title", "Clash of Clans"))

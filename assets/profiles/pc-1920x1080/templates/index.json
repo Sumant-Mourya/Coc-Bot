@@ -1559,6 +1559,66 @@
     ],
     "threshold": 0.8
   },
+  "raid/army_button": {
+    "box": [
+      222,
+      972,
+      92,
+      88
+    ],
+    "region": [
+      162,
+      912,
+      212,
+      168
+    ],
+    "threshold": 0.85
+  },
+  "raid/army_save": {
+    "box": [
+      1131,
+      448,
+      129,
+      46
+    ],
+    "region": [
+      1071,
+      388,
+      249,
+      166
+    ],
+    "threshold": 0.85
+  },
+  "raid/army_title": {
+    "box": [
+      750,
+      30,
+      390,
+      36
+    ],
+    "region": [
+      690,
+      0,
+      510,
+      126
+    ],
+    "threshold": 0.85
+  },
+  "raid/army_trash": {
+    "box": [
+      772,
+      444,
+      46,
+      54
+    ],
+    "region": [
+      712,
+      384,
+      166,
+      174
+    ],
+    "threshold": 0.85
+  },
   "raid/attack_go": {
     "box": [
       1405,
@@ -1571,6 +1631,21 @@
       520,
       360,
       160
+    ],
+    "threshold": 0.85
+  },
+  "raid/attack_go~2": {
+    "box": [
+      1566,
+      582,
+      150,
+      42
+    ],
+    "region": [
+      1506,
+      522,
+      270,
+      162
     ],
     "threshold": 0.85
   },
@@ -1589,6 +1664,21 @@
     ],
     "threshold": 0.85
   },
+  "raid/attack_now_title~2": {
+    "box": [
+      798,
+      108,
+      325,
+      46
+    ],
+    "region": [
+      738,
+      48,
+      445,
+      166
+    ],
+    "threshold": 0.85
+  },
   "raid/attacking_title": {
     "box": [
       835,
@@ -1601,6 +1691,81 @@
       20,
       520,
       100
+    ],
+    "threshold": 0.85
+  },
+  "raid/attacking_title~2": {
+    "box": [
+      828,
+      44,
+      265,
+      38
+    ],
+    "region": [
+      768,
+      0,
+      385,
+      142
+    ],
+    "threshold": 0.85
+  },
+  "raid/battle_end": {
+    "box": [
+      910,
+      934,
+      100,
+      46
+    ],
+    "region": [
+      850,
+      874,
+      220,
+      166
+    ],
+    "threshold": 0.85
+  },
+  "raid/battle_frost": {
+    "box": [
+      275,
+      955,
+      96,
+      62
+    ],
+    "region": [
+      160,
+      915,
+      1600,
+      165
+    ],
+    "threshold": 0.85
+  },
+  "raid/battle_graveyard": {
+    "box": [
+      396,
+      955,
+      96,
+      62
+    ],
+    "region": [
+      160,
+      915,
+      1600,
+      165
+    ],
+    "threshold": 0.85
+  },
+  "raid/battle_miner": {
+    "box": [
+      142,
+      955,
+      95,
+      62
+    ],
+    "region": [
+      160,
+      915,
+      1600,
+      165
     ],
     "threshold": 0.85
   },
@@ -1645,6 +1810,21 @@
       500,
       860,
       1000,
+      220
+    ],
+    "threshold": 0.85
+  },
+  "raid/map_button": {
+    "box": [
+      40,
+      920,
+      140,
+      120
+    ],
+    "region": [
+      0,
+      860,
+      240,
       220
     ],
     "threshold": 0.85
@@ -1708,6 +1888,66 @@
       180
     ],
     "threshold": 0.85
+  },
+  "raid/return_home~2": {
+    "box": [
+      40,
+      985,
+      135,
+      60
+    ],
+    "region": [
+      0,
+      925,
+      235,
+      155
+    ],
+    "threshold": 0.85
+  },
+  "raid/spell_frost": {
+    "box": [
+      1090,
+      880,
+      118,
+      100
+    ],
+    "region": [
+      330,
+      660,
+      1270,
+      390
+    ],
+    "threshold": 0.9
+  },
+  "raid/spell_graveyard": {
+    "box": [
+      1420,
+      880,
+      118,
+      100
+    ],
+    "region": [
+      330,
+      660,
+      1270,
+      390
+    ],
+    "threshold": 0.9
+  },
+  "raid/unit_super_miner": {
+    "box": [
+      404,
+      880,
+      115,
+      100
+    ],
+    "region": [
+      330,
+      660,
+      1270,
+      390
+    ],
+    "threshold": 0.9
   },
   "request/send": {
     "box": [

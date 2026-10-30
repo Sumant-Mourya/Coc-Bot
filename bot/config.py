@@ -32,7 +32,8 @@ DEFAULT_MARGIN = {"gold": 500000, "elixir": 500000, "dark": 5000}
 
 DEFAULT_SETTINGS = {
     "device": {
-        "type": "pc",                       # "pc" (Google Play Games) or "adb"
+        "type": "bluestacks",               # "bluestacks" (BlueStacks 5 on this PC), "pc" (Google Play Games) or "adb"
+        "bluestacks_instance": "",          # "" = the main instance (Pie64); clones are Pie64_1 ...
         "shortcut_path": r"C:\Users\Amigo\AppData\Roaming\Microsoft\Windows\Start Menu\Programs"
                          r"\Google Play Games\Clash of Clans.lnk",
         "window_title": "Clash of Clans",

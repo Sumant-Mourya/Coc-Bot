@@ -8,7 +8,7 @@ diamond (measured from the old bot's edge points, which are known to work) and
 away from the on-screen buttons.
 
 All coordinates are game space at full zoom-out; the village is centred, so the
-base-screen geometry below is shifted with space.center().
+base-screen geometry below is shifted with space.center() and sized with space.f().
 """
 
 
@@ -51,7 +51,7 @@ def in_diamond(x, y, inset=0.0):
     d = DIAMOND
     cx, cy = space.center(d["cx"], d["cy"])
     hh = d["half_h_top"] if y < cy else d["half_h_bottom"]
-    return abs(x - cx) / d["half_w"] + abs(y - cy) / hh <= 1.0 - inset
+    return abs(x - cx) / space.f(d["half_w"]) + abs(y - cy) / space.f(hh) <= 1.0 - inset
 
 
 def _ui_mask(h, w):
@@ -65,7 +65,7 @@ def _ui_mask(h, w):
 def _diamond_mask(h, w, inset=0.0):
     d = DIAMOND
     cx, cy = space.center(d["cx"], d["cy"])
-    k = 1.0 - inset
+    k = space.f(1.0 - inset)
     pts = np.array([[cx - d["half_w"] * k, cy], [cx, cy - d["half_h_top"] * k],
                     [cx + d["half_w"] * k, cy], [cx, cy + d["half_h_bottom"] * k]], np.int32)
     mask = np.zeros((h, w), np.uint8)
@@ -124,7 +124,8 @@ def deploy_line(frame, count=24, margin=70):
     hull = cv2.convexHull(pts)
     filled = np.zeros_like(mask)
     cv2.fillPoly(filled, [hull], 255)
-    kx, ky = margin, int(margin * 0.75)                  # isometric view: flatter vertically
+    kx = int(space.f(margin))
+    ky = int(kx * 0.75)                                  # isometric view: flatter vertically
     grown = cv2.dilate(filled, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * kx + 1, 2 * ky + 1)))
     contours, _ = cv2.findContours(grown, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     if not contours:
@@ -159,7 +160,7 @@ def draw(frame, points):
         cv2.circle(out, (x, y), 9, (0, 255, 0), 3)
     d = DIAMOND
     cx, cy = space.center(d["cx"], d["cy"])
-    k = 1 + MAP_GROW
+    k = space.f(1 + MAP_GROW)
     pts = np.array([[cx - d["half_w"] * k, cy], [cx, cy - d["half_h_top"] * k], [cx + d["half_w"] * k, cy],
                     [cx, cy + d["half_h_bottom"] * k]], np.int32)
     cv2.polylines(out, [pts], True, (255, 255, 0), 2)

@@ -501,8 +501,8 @@ class MainWindow(QMainWindow):
         status = lambda **kw: self.bridge.status.emit(kw)  # noqa: E731
         self.runner = Runner("flow", self.settings, self.accounts, status,
                              lambda reason: self.bridge.finished.emit(reason))
-        device = ("Google Play Games (PC)" if self.settings["device"]["type"] == "pc"
-                  else f"ADB {self.settings['device']['adb_serial']}")
+        d = self.settings["device"]
+        device = {"pc": "Google Play Games (PC)", "bluestacks": "BlueStacks"}.get(d["type"], f"ADB {d['adb_serial']}")
         self.bridge.status.emit({"device": device})
         self.runner.start()
         title = self._flow_title()

@@ -82,6 +82,25 @@ def check_bot_files():
         line(OK if os.path.exists(p) else WARN,
              f"Game shortcut found: {p}" if os.path.exists(p) else
              f"Game shortcut not found ({p or 'not set'}): set it on the Device page")
+    elif d["type"] == "bluestacks":
+        from bot.core.devices import BlueStacks, find_adb
+        bs = BlueStacks.find()
+        if not bs:
+            line(FAIL, "BlueStacks 5 not found: install it, or choose another device on the Device page")
+            return
+        try:
+            inst = bs.instance(d.get("bluestacks_instance", ""))
+        except RuntimeError as e:
+            line(FAIL, str(e))
+            return
+        size = "x".join(map(str, inst["size"] or ("?", "?")))
+        line(OK, f"BlueStacks instance {inst['name']} ({inst['title']}), ADB 127.0.0.1:{inst['port']}, screen {size}")
+        if inst["size"] and inst["size"] != profile.size:
+            line(WARN, f"BlueStacks' screen is {size}: set it to {profile.size[0]}x{profile.size[1]} "
+                       "(BlueStacks Settings > Display) to match the pictures")
+        if not bs.adb_enabled():
+            line(FAIL, "ADB is off in BlueStacks: Settings > Advanced > Android Debug Bridge")
+        line(OK, f"adb: {find_adb(d.get('adb_path', '')) or bs.adb}")
     else:
         from bot.core.devices import find_adb
         adb = find_adb(d.get("adb_path", ""))

@@ -703,9 +703,11 @@ class RaidSettings(StepSettings):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.who = Card("Accounts", "Raid Weekend (Friday 12:30 to Monday 12:30, India time): each account opens the "
-                        "Clan Capital, starts a raid attack without placing troops, and the game is closed and opened "
-                        "again - that ends the attack at once. Again until its raid attacks are used. Outside the "
-                        "Raid Weekend the bot waits for the next one.", icon="castle", color=STEP_COLORS["raid"])
+                        "Clan Capital, sets its army to Super Miners + 1 Frost + 2 Graveyard and attacks the "
+                        "districts from the top of the raid map down, each until it is destroyed (Capital Peak "
+                        "last). Everything is dropped on one spot outside the district's right corner. Again until "
+                        "its raid attacks are used. Outside the Raid Weekend the bot waits for the next one.",
+                        icon="castle", color=STEP_COLORS["raid"])
         self.accounts_field = AccountsField()
         self.accounts_field.step = self.key
         self.who.add(self.accounts_field)

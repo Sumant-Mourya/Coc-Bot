@@ -1,7 +1,7 @@
 # Coc-Bot
 
-Clash of Clans bot with a window, for Google Play Games on PC or Android over ADB
-(BlueStacks, LDPlayer, MuMu, Nox or a phone).
+Clash of Clans bot with a window, for **BlueStacks 5** on this PC (the default), Google Play Games
+on PC, or Android over ADB (LDPlayer, MuMu, Nox or a phone).
 
 ## Setup (once)
 
@@ -41,6 +41,11 @@ more; from Town Hall 16 its weapon gets all 5 stars first). Prices are read from
 price changes are fine) and gems are never spent. Builder Base attacks are ended after 60 seconds. When the bot
 starts the game it closes the Google Play Games store window that opens with it.
 
+**BlueStacks** (Device page → BlueStacks, the default): Clash of Clans installed in BlueStacks 5, its ADB switched on
+(BlueStacks Settings > Advanced > Android Debug Bridge) and its screen set to 1920×1080 (Settings > Display). The
+instance and its ADB address are read from BlueStacks' own settings, BlueStacks is started when it is not running
+(also when it was closed during a run), and only that instance is used even when a phone is on ADB too.
+
 **Android emulator** (Device page → Android): set the emulator to 1920×1080 and switch on its ADB. Only adb
 is used (screenshots + taps), nothing is mirrored or recorded and the PC stays free. The running emulator is
 picked automatically.
@@ -75,6 +80,16 @@ the key on each troop card, so it works with whatever the account has.
 - **Research**: same for the laboratory.
 - Prices are read from the Confirm button (also discounted green prices); only the button with a resource price is
   pressed. Boost, Finish Now and Hammer/Book confirms are never touched; "buy with gems" offers are closed.
+
+## Raid Weekend (Clan Capital)
+
+Friday 12:30 to Monday 12:30 (India time), the **Raid Weekend** option does each account's raid attacks:
+zoom out, the airship by the river → Clan Capital (the red "5 ⚔" over Raid Map = attacks left) → Change Capital
+Army: delete it, Super Miners only, 1 Frost, 2 Graveyard, Save → Raid Map → the districts from the top down, each
+until it is destroyed (Builder's Workshop, Golem Quarry, Goblin Mines and Skeleton Park after swiping the map up;
+Capital Peak last) → zoom out, pan fully down and right → everything on one spot of the deploy strip along the
+district's lower-right side (more taps along the strip when a tap does not deploy) → Map, next attack. Set up and
+checked on BlueStacks at 1920×1080.
 
 ## Smart donations (Donate page)
 

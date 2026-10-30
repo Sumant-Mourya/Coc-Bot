@@ -1165,6 +1165,18 @@ class Banner(QFrame):
         self.buttons.setSpacing(6)
         lay.addLayout(self.buttons)
 
+    def set(self, text, kind=None):
+        """New text (and kind); hidden while the text is empty."""
+        if kind and kind != self.property("kind"):
+            icon, color = self.KINDS[kind]
+            self.setProperty("kind", kind)
+            self.icon.setPixmap(icons.pixmap(icon, color, 18))
+            self.text.setStyleSheet(f"color: {T.mix(color, T.TEXT, 0.55).name()};")
+            self.style().unpolish(self)
+            self.style().polish(self)
+        self.text.setText(text)
+        self.setVisible(bool(text))
+
     def add_button(self, b):
         self.buttons.addWidget(b, 0, Qt.AlignVCenter)
         return b
